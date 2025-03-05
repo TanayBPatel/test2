@@ -7,9 +7,10 @@ import MentorCard from '../../components/dashboard/MentorCard';
 import UpcomingMeetingCard from '../../components/dashboard/UpcomingMeetingCard';
 import AchievementCard from '../../components/dashboard/AchievementCard';
 import Button from '../../components/ui/Button';
-
+import { useNavigate } from 'react-router-dom';
 const Dashboard: React.FC = () => {
   // Filter data for the current user
+  const navigate=useNavigate();
   const upcomingGoals = mockGoals.filter(goal => goal.status !== 'completed').slice(0, 2);
   const upcomingMeetings = mockMeetings.filter(meeting => 
     meeting.studentId === currentUser.id && meeting.status === 'scheduled'

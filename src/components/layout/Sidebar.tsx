@@ -88,10 +88,14 @@ const Sidebar: React.FC<SidebarProps> = ({ user }) => {
       </nav>
       
       <div className="p-4 border-t border-indigo-800">
-        <button className="flex items-center space-x-3 text-indigo-200 hover:text-white w-full px-4 py-3 rounded-md transition-colors">
-          <LogOut size={20} />
-          <span>Logout</span>
-        </button>
+      <button
+        className="flex items-center space-x-3 text-indigo-200 hover:text-white w-full px-4 py-3 rounded-md transition-colors"
+        onClick={() => window.location.href = "https://finaltest-beige.vercel.app/"}
+      >
+        <LogOut size={20} />
+        <span>Logout</span>
+      </button>
+
       </div>
     </div>
   );
