@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Video, VideoOff, Phone, MessageSquare, Users, Share, Settings } from 'lucide-react';
 import { Card, CardBody } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -11,10 +11,44 @@ const VideoCall: React.FC = () => {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
-  
+  const [messages, setMessages] = useState<Array<{ sender: string; text: string; timestamp: string }>>([]);
+  const [newMessage, setNewMessage] = useState('');
+
+  const userVideoRef = useRef<HTMLVideoElement>(null);
+  const mentorVideoRef = useRef<HTMLVideoElement>(null);
+
   // For demo purposes, we'll use the first mentor
   const activeMentor = mockMentors[0];
-  
+
+  // Initialize user's camera and microphone
+  useEffect(() => {
+    const initializeMedia = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        if (userVideoRef.current) {
+          userVideoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing media devices:', error);
+      }
+    };
+
+    initializeMedia();
+  }, []);
+
+  // Handle sending a chat message
+  const handleSendMessage = () => {
+    if (newMessage.trim()) {
+      const message = {
+        sender: currentUser.name,
+        text: newMessage.trim(),
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      setMessages([...messages, message]);
+      setNewMessage('');
+    }
+  };
+
   return (
     <div className="space-y-6 h-[calc(100vh-120px)]">
       <div className="flex justify-between items-center">
@@ -27,16 +61,17 @@ const VideoCall: React.FC = () => {
           <span className="text-sm text-gray-500">00:32:15</span>
         </div>
       </div>
-      
+
       <div className="flex h-[calc(100%-80px)]">
         <div className={`flex-1 flex flex-col ${isChatOpen || isParticipantsOpen ? 'mr-4' : ''}`}>
           <div className="relative bg-black rounded-lg overflow-hidden flex-1 mb-4">
             {/* Main video (mentor) */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <img 
-                src={activeMentor.avatar} 
-                alt={activeMentor.name}
-                className="w-full h-full object-cover opacity-20"
+              <video
+                ref={mentorVideoRef}
+                autoPlay
+                muted
+                className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-black bg-opacity-50"></div>
               <div className="text-center text-white">
@@ -45,7 +80,7 @@ const VideoCall: React.FC = () => {
                 <p className="text-sm text-gray-300">Mentor</p>
               </div>
             </div>
-            
+
             {/* Self video (small) */}
             <div className="absolute bottom-4 right-4 w-48 h-36 bg-gray-800 rounded-lg overflow-hidden border-2 border-white shadow-lg">
               {isVideoOff ? (
@@ -53,9 +88,10 @@ const VideoCall: React.FC = () => {
                   <Avatar src={currentUser.avatar} alt={currentUser.name} size="lg" />
                 </div>
               ) : (
-                <img 
-                  src={currentUser.avatar} 
-                  alt={currentUser.name}
+                <video
+                  ref={userVideoRef}
+                  autoPlay
+                  muted={isMuted}
                   className="w-full h-full object-cover"
                 />
               )}
@@ -69,7 +105,7 @@ const VideoCall: React.FC = () => {
               )}
             </div>
           </div>
-          
+
           <div className="bg-gray-100 rounded-lg p-4 flex justify-center items-center space-x-4">
             <Button
               variant={isMuted ? "danger" : "secondary"}
@@ -78,7 +114,7 @@ const VideoCall: React.FC = () => {
             >
               {isMuted ? "Unmute" : "Mute"}
             </Button>
-            
+
             <Button
               variant={isVideoOff ? "danger" : "secondary"}
               onClick={() => setIsVideoOff(!isVideoOff)}
@@ -86,7 +122,7 @@ const VideoCall: React.FC = () => {
             >
               {isVideoOff ? "Start Video" : "Stop Video"}
             </Button>
-            
+
             <Button
               variant={isScreenSharing ? "danger" : "secondary"}
               onClick={() => setIsScreenSharing(!isScreenSharing)}
@@ -94,7 +130,7 @@ const VideoCall: React.FC = () => {
             >
               {isScreenSharing ? "Stop Sharing" : "Share Screen"}
             </Button>
-            
+
             <Button
               variant={isChatOpen ? "primary" : "secondary"}
               onClick={() => {
@@ -105,7 +141,7 @@ const VideoCall: React.FC = () => {
             >
               Chat
             </Button>
-            
+
             <Button
               variant={isParticipantsOpen ? "primary" : "secondary"}
               onClick={() => {
@@ -116,14 +152,14 @@ const VideoCall: React.FC = () => {
             >
               Participants
             </Button>
-            
+
             <Button
               variant="secondary"
               icon={<Settings size={20} />}
             >
               Settings
             </Button>
-            
+
             <Button
               variant="danger"
               icon={<Phone size={20} />}
@@ -132,61 +168,68 @@ const VideoCall: React.FC = () => {
             </Button>
           </div>
         </div>
-        
+
         {isChatOpen && (
           <Card className="w-80">
             <CardBody className="p-0 flex flex-col h-full">
               <div className="p-4 border-b">
                 <h3 className="font-medium text-gray-900">Chat</h3>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <div className="flex space-x-2">
-                  <Avatar src={activeMentor.avatar} alt={activeMentor.name} size="sm" />
-                  <div className="bg-gray-100 rounded-lg p-2 max-w-[80%]">
-                    <p className="text-sm text-gray-900">How's your progress on the React project?</p>
-                    <p className="text-xs text-gray-500 mt-1">10:32 AM</p>
+                {messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex space-x-2 ${
+                      message.sender === currentUser.name ? 'justify-end' : ''
+                    }`}
+                  >
+                    {message.sender !== currentUser.name && (
+                      <Avatar src={activeMentor.avatar} alt={activeMentor.name} size="sm" />
+                    )}
+                    <div
+                      className={`${
+                        message.sender === currentUser.name
+                          ? 'bg-indigo-100'
+                          : 'bg-gray-100'
+                      } rounded-lg p-2 max-w-[80%]`}
+                    >
+                      <p className="text-sm text-gray-900">{message.text}</p>
+                      <p className="text-xs text-gray-500 mt-1">{message.timestamp}</p>
+                    </div>
+                    {message.sender === currentUser.name && (
+                      <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
+                    )}
                   </div>
-                </div>
-                
-                <div className="flex space-x-2 justify-end">
-                  <div className="bg-indigo-100 rounded-lg p-2 max-w-[80%]">
-                    <p className="text-sm text-gray-900">I've completed the component structure, but I'm having issues with state management.</p>
-                    <p className="text-xs text-gray-500 mt-1">10:34 AM</p>
-                  </div>
-                  <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Avatar src={activeMentor.avatar} alt={activeMentor.name} size="sm" />
-                  <div className="bg-gray-100 rounded-lg p-2 max-w-[80%]">
-                    <p className="text-sm text-gray-900">Let's share your screen and take a look at the code together.</p>
-                    <p className="text-xs text-gray-500 mt-1">10:35 AM</p>
-                  </div>
-                </div>
+                ))}
               </div>
-              
+
               <div className="p-4 border-t">
                 <div className="flex space-x-2">
                   <input
                     type="text"
                     placeholder="Type a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
-                  <Button variant="primary" size="sm" icon={<Send size={16} />} />
+                  <Button variant="primary" size="sm" onClick={handleSendMessage}>
+                    Send
+                  </Button>
                 </div>
               </div>
             </CardBody>
           </Card>
         )}
-        
+
         {isParticipantsOpen && (
           <Card className="w-80">
             <CardBody className="p-0">
               <div className="p-4 border-b">
                 <h3 className="font-medium text-gray-900">Participants (2)</h3>
               </div>
-              
+
               <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -201,7 +244,7 @@ const VideoCall: React.FC = () => {
                     <Video size={16} className="text-gray-500" />
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" status="online" />
@@ -231,23 +274,5 @@ const VideoCall: React.FC = () => {
     </div>
   );
 };
-
-// Helper component for the VideoCall page
-const Send: React.FC<{ size: number }> = ({ size }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
-  >
-    <line x1="22" y1="2" x2="11" y2="13"></line>
-    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-  </svg>
-);
 
 export default VideoCall;
